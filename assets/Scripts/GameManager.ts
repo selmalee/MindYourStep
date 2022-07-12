@@ -31,15 +31,15 @@ export class GameManager extends Component {
   public cubePrfb: Prefab | null = null;
   // 赛道长度
   @property
-  public roadLength = 50;
+  public roadLength = 20;
   private _road: BlockType[] = [];
   // 当前步数展示
   @property({type: Label})
   public stepsLabel: Label | null = null;
   private _steps: Number = 0;
-  // 结束分数
-  @property({type: Label})
-  public scoreLabel: Label | null = null;
+  // // 结束分数
+  // @property({type: Label})
+  // public scoreLabel: Label | null = null;
   // 结果
   @property({type: Label})
   public resultLabel: Label | null = null;
@@ -57,6 +57,9 @@ export class GameManager extends Component {
     if (this.startMenu) {
       this.startMenu.active = true;
     }
+    if (this.stepsLabel) {
+      this.stepsLabel.string = 'Steps: 0';   // 将步数重置为0
+    }
     // 生成赛道
     this.generateRoad();
     if(this.playerCtrl){
@@ -67,6 +70,20 @@ export class GameManager extends Component {
     }
   }
 
+  playing() {
+    if (this.startMenu) {
+      this.startMenu.active = false;
+    }
+    // 设置 active 为 true 时会直接开始监听鼠标事件，此时鼠标抬起事件还未派发
+    // 会出现的现象就是，游戏开始的瞬间人物已经开始移动
+    // 因此，这里需要做延迟处理
+    setTimeout(() => {
+      if (this.playerCtrl) {
+        this.playerCtrl.setInputActive(true);
+      }
+    }, 0.1);
+  }
+
   end(isWin) {
     // 激活主界面
     if (this.EndMenu) {
@@ -75,12 +92,15 @@ export class GameManager extends Component {
     if (this.stepsLabel) {
       this.stepsLabel.string = '';
     }
-    if (this.scoreLabel) {
-      this.scoreLabel.string = `Your Score: ${this._steps}`;
+    if (this.stepsLabel) {
+      this.stepsLabel.string = `Your Score: ${this._steps}`;
     }
+    // if (this.scoreLabel) {
+    //   this.scoreLabel.string = `Your Score: ${this._steps}`;
+    // }
     if (this.resultLabel) {
       this.resultLabel.string = isWin ? 'You Win!' : 'You Died!';
-      this.resultLabel.color = isWin ? new Color(0, 0, 255) : new Color(255, 0, 0);
+      this.resultLabel.color = isWin ? new Color(255, 122, 0) : new Color(255, 0, 0);
     }
     // 禁止接收用户操作人物移动指令
     this.playerCtrl?.setInputActive(false);
@@ -92,23 +112,11 @@ export class GameManager extends Component {
         this.init();
         break;
       case GameState.GS_PLAYING:
-        if (this.startMenu) {
-          this.startMenu.active = false;
-        }
-        if (this.stepsLabel) {
-          this.stepsLabel.string = 'Steps: 0';   // 将步数重置为0
-        }
-        // 设置 active 为 true 时会直接开始监听鼠标事件，此时鼠标抬起事件还未派发
-        // 会出现的现象就是，游戏开始的瞬间人物已经开始移动
-        // 因此，这里需要做延迟处理
-        setTimeout(() => {
-          if (this.playerCtrl) {
-            this.playerCtrl.setInputActive(true);
-          }
-        }, 0.1);
+        this.playing();
         break;
       case GameState.GS_WIN:
         this.end(true);
+        this.playerCtrl?.win();
         break;
       case GameState.GS_DIE:
         this.end(false);
@@ -134,9 +142,9 @@ export class GameManager extends Component {
     this._road.push(BlockType.BT_STONE);
 
     // 确定好每一格赛道类型
-    for (let i = 1; i < this.roadLength; i++) {
-      // 如果上一格赛道是坑，那么这一格一定不能为坑
-      if (this._road[i-1] === BlockType.BT_NONE) {
+    for (let i = 1, len = this.roadLength + 1; i < len; i++) {
+      if (i === len - 1 || this._road[i - 1] === BlockType.BT_NONE) {
+        // 如果是终点，或者上一格赛道是坑，那么这一格一定不能为坑
         this._road.push(BlockType.BT_STONE);
       } else {
         this._road.push(Math.floor(Math.random() * 2));
@@ -176,14 +184,15 @@ export class GameManager extends Component {
       // 跳到了坑上
       if (this._road[moveIndex] == BlockType.BT_NONE) {
         this.curState = GameState.GS_DIE;
+      } else {
+        this._steps = moveIndex;
+        this.stepsLabel.string = `Steps: ${this._steps}`;
       }
-      this._steps = moveIndex;
     } else {
       // 跳过了最大长度
-      this.curState = GameState.GS_WIN;
       this._steps = this.roadLength; // 因为在最后一步可能出现步伐大的跳跃，但是此时无论跳跃是步伐大还是步伐小都不应该多增加分数
+      this.curState = GameState.GS_WIN;
     }
-    this.stepsLabel.string = `Steps: ${this._steps}`;
   }
 
   // update (deltaTime: number) {

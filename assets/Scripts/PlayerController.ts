@@ -49,8 +49,13 @@ export class PlayerController extends Component {
   }
 
   public die() {
-    this.CocosAnim.getState('cocos_anim_die').speed = 3.5;
+    this.CocosAnim.getState('cocos_anim_die').repeatCount = 1;
     this.CocosAnim.play('cocos_anim_die');
+  }
+
+  public win() {
+    this.CocosAnim.getState('cocos_anim_attack').repeatCount = 1;
+    this.CocosAnim.play('cocos_anim_attack');
   }
 
   onMouseUp(event: EventMouse) {
